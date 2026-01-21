@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
-import 'dart:math' as math;
-import 'dart:io';
-import 'package:window_manager/window_manager.dart';
+import 'package:flutter/material.dart'; // Flutter UI framework
+import 'dart:math' as math; // Advanced math functions like root and power
+import 'dart:io'; // Operating system detection
+import 'package:window_manager/window_manager.dart'; // Desktop window management
 
-bool lockAspectRatio = true; 
+bool lockAspectRatio = true; // Flag to lock the window aspect ratio on desktop platforms
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
+  // Configure window options for desktop platforms
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     WindowOptions windowOptions = const WindowOptions(
       size: Size(400, 650),
@@ -16,9 +17,10 @@ void main() async {
       title: "Calculator",
     );
 
+    // Show window and set aspect ratio if locked
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
-      
+
       if (lockAspectRatio) {
         await windowManager.setAspectRatio(4 / 6.5);
       }
@@ -28,6 +30,7 @@ void main() async {
   runApp(const MyApp());
 }
 
+// Root widget of the app
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -44,23 +47,27 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// Calculator buttons in order
 var items = [
   '%', '^', '√', '÷', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', 'C', '=',
 ];
 
-var currentCalculation = '';
-var lastInput = '';
+// State variables for calculation
+var currentCalculation = ''; // Full expression shown on screen
+var lastInput = ''; // Last input/result shown on display
 double? number1;
 double? number2;
 String operator = '';
 String result = '';
-bool num1neg = false;
-bool num2neg = false;
-bool justSolved = false;
-String number1Str = '';
-String number2Str = '';
+bool num1neg = false; // Whether number1 is negative
+bool num2neg = false; // Whether number2 is negative
+bool justSolved = false; // Flag to indicate last action was solve
+String number1Str = ''; // String form of first number (for decimal input)
+String number2Str = ''; // String form of second number
 
+// Core solver function handling all supported operations
 void solver(double? a, double? b, String op) {
+  // Apply negative flags
   if (num1neg && a != null) a = -a;
   if (num2neg && b != null) b = -b;
 
@@ -79,7 +86,7 @@ void solver(double? a, double? b, String op) {
       break;
     case '÷':
       if ((b ?? left) == 0) {
-        result = 'Error';
+        result = 'Error'; // Avoid division by zero
         return;
       } else {
         result = (left / (b ?? left)).toString();
@@ -104,12 +111,15 @@ void solver(double? a, double? b, String op) {
     default:
       throw Exception('Unknown operator');
   }
-  // Do NOT reset num1neg or num2neg here, keep state for test
+  // Note: negative flags are not reset here to preserve state for testing
 }
 
+// Handles input for each button press and updates calculation state
 void input(String input) {
   if (justSolved == true) {
+    // After solving, clear or chain calculation based on next input
     if (RegExp(r'^[0-9.]+$').hasMatch(input)) {
+      // Clear for new input if digit or dot
       currentCalculation = '';
       lastInput = '';
       number1 = null;
@@ -121,16 +131,16 @@ void input(String input) {
       number1Str = '';
       number2Str = '';
     } else if (RegExp(r'^[+\-*/÷^%√]$').hasMatch(input)) {
+      // Chain calculation starting from previous result
       number1 = double.tryParse(result);
       operator = input;
       currentCalculation = '';
       currentCalculation += number1.toString();
       currentCalculation += input;
-      lastInput = '';
-      lastInput += number1.toString();
-      input = 's';
+      lastInput = number1.toString();
+      input = 's'; // Skip adding this input again below
     } else if (input == 's') {
-      input = 's';
+      input = 's'; // Explicit skip
     }
   }
 
@@ -149,7 +159,7 @@ void input(String input) {
     }
   }
 
-  // Auto-solve if number1, number2 and operator exist and user inputs another operator (except '=')
+  // Auto-solve when operator and both numbers exist and a new operator (not '=') is pressed
   if (number1 != null && number2 != null && operator.isNotEmpty && RegExp(r'^[+\-*/÷^%√]$').hasMatch(input)) {
     solver(number1, number2, operator);
     lastInput = result;
@@ -170,7 +180,7 @@ void input(String input) {
   justSolved = false;
 
   switch (input) {
-    case 'C':
+    case 'C': // Clear all
       currentCalculation = '';
       lastInput = '';
       number1 = null;
@@ -193,11 +203,11 @@ void input(String input) {
       break;
     case '-':
       if (number1 == null) {
-        num1neg = true;
+        num1neg = true; // Negative sign for first number
       } else if (operator.isEmpty) {
         operator = '-';
       } else {
-        num2neg = true;
+        num2neg = true; // Negative sign for second number
         currentCalculation += input;
       }
       break;
@@ -241,7 +251,7 @@ void input(String input) {
         operator = '%';
       }
       break;
-    case '=':
+    case '=': // Calculate result
       solver(number1, number2, operator);
       lastInput = result;
       currentCalculation = ('$number1$operator$number2=').replaceAll('null', '');
@@ -252,7 +262,7 @@ void input(String input) {
       number1Str = '';
       number2Str = '';
       break;
-    case '.':
+    case '.': // Handle decimal points
       if (operator.isEmpty) {
         if (number1Str.contains('.')) break;
         if (number1Str.isEmpty) number1Str = '0';
@@ -265,9 +275,9 @@ void input(String input) {
         number2 = double.tryParse(number2Str);
       }
       break;
-    case 's': // skip
+    case 's': // Skip input, used internally for flow control
       break;
-    default:
+    default: // Append digit input to the appropriate number string
       if (RegExp(r'^[0-9]+$').hasMatch(input)) {
         if (operator.isEmpty) {
           number1Str += input;
@@ -281,6 +291,7 @@ void input(String input) {
   }
 }
 
+// Home page widget with UI for the calculator
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
@@ -291,6 +302,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
+    // Top display shows last input/result
     Widget topDisplay = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -304,6 +316,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
 
+    // Bottom display shows the full current calculation expression
     Widget bottomDisplay = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(8),
@@ -326,6 +339,7 @@ class _MyHomePageState extends State<MyHomePage> {
             topDisplay,
             bottomDisplay,
             const SizedBox(height: 12),
+            // Grid of calculator buttons
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -365,7 +379,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-// Test function to validate calculator logic
+// Simple testing helper to validate operations
 void test(String label, double? a, double? b, String op, String expected, {bool num1Neg = false, bool num2Neg = false}) {
   number1 = a;
   number2 = b;
@@ -381,7 +395,7 @@ void test(String label, double? a, double? b, String op, String expected, {bool 
   print('$label = $actual [$ok]');
 }
 
-// Runs a set of tests printing the results
+// Runs a suite of basic tests, printing results
 void runTests() {
   print('--- BASIC OPERATIONS ---');
   test('1.0 + 2.0', 1, 2, '+', '3.0');
@@ -395,7 +409,7 @@ void runTests() {
   test('2.5 * 2.0', 2.5, 2.0, '*', '5.0');
 
   print('\n--- NEGATIVES ---');
-  test('-5.0 + 3.0', 5, 3, '+', '-2.0', num1Neg: true);  // Correct negative
+  test('-5.0 + 3.0', 5, 3, '+', '-2.0', num1Neg: true);
   test('-4.0 * -2.0', 4, 2, '*', '8.0', num1Neg: true, num2Neg: true);
 
   print('\n--- POWER / ROOT ---');
