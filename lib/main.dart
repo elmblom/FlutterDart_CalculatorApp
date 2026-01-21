@@ -1,11 +1,31 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'dart:io';
+import 'package:window_manager/window_manager.dart';
 
-void main() {
+bool lockAspectRatio = true; 
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(400, 650),
+      center: true,
+      title: "Calculator",
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      
+      if (lockAspectRatio) {
+        await windowManager.setAspectRatio(4 / 6.5);
+      }
+    });
+  }
+
   runApp(const MyApp());
-
-  // Run tests on start
-  runTests();
 }
 
 class MyApp extends StatelessWidget {
@@ -18,6 +38,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      debugShowCheckedModeBanner: false,
       home: const MyHomePage(),
     );
   }
@@ -134,7 +155,7 @@ void input(String input) {
     lastInput = result;
     currentCalculation = result;
     currentCalculation += input;
-    number1 = double.tryParse(result) ?? null;
+    number1 = double.tryParse(result);
     number2 = null;
     operator = input != '=' ? input : '';
     justSolved = true;
