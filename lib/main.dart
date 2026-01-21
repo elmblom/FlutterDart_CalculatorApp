@@ -7,10 +7,10 @@ bool lockAspectRatio = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
 
-  // Setup window options and show window on desktop platforms
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+
     const windowOptions = WindowOptions(
       size: Size(400, 650),
       center: true,
